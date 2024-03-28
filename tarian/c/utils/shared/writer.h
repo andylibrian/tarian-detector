@@ -127,8 +127,8 @@ stain int write_str_arr(uint8_t *buf, uint64_t *pos, u64 reserved_space, char **
     if (arg_len <= 0)
       break;
 
-    total_len += arg_len;
-    *pos += arg_len & (MAX_STRING_SIZE - 1);
+    total_len += arg_len - 1 /* exclude '\0' from length */ ;
+    *pos += (arg_len - 1) & (MAX_STRING_SIZE - 1);
   }
   
   total_len = total_len & (MAX_STRING_SIZE - 1);
