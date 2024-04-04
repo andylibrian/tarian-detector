@@ -37,7 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Prepare the Tarian detector by attaching eBPF programs and creating map readers
+	// Prepare the Tarian detector by creating map readers
 	tarianDetector, err := tarianEbpfModule.Prepare()
 	if err != nil {
 		log.Fatal(err)
@@ -55,6 +55,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer eventsDetector.Close()
+
+	// Attaches tarian module programs to the kernel
+	err = tarianEbpfModule.Attach(tarianDetector)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Printf("%d probes running...\n\n", eventsDetector.Count())
 
