@@ -42,6 +42,10 @@ stain void stats__add(int error_code) {
         ts->n_trgs_dropped_max_buffer_size++;
         ts->n_trgs_dropped++;
         break;
+    case TDCE_FILTER_IGNORE:
+        ts->n_trgs_filter_drop++;
+        ts->n_trgs_dropped++;
+        break;
     default:
         ts->n_trgs_unknown++;
         ts->n_trgs_dropped++;

@@ -12,6 +12,8 @@ stain int read_node_info_into(node_meta_data_t *ni, struct task_struct *t);
 stain int new_event(void *ctx, int tarian_event, tarian_event_t *te, enum allocation_type at,int req_buf_sz) {
   stats__add_trigger();
 
+  if (!can_proceed()) return TDCE_FILTER_IGNORE;
+
   te->allocation_mode = 0;
   te->ctx = ctx;
   te->task = (struct task_struct *)bpf_get_current_task();

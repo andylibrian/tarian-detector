@@ -42,10 +42,28 @@ func (m *Module) Map(mp *MapInfo) {
 }
 
 // Prepare initializes the module and returns a handler along with any errors encountered.
+// It creates a new handler with the provided module name and creates map readers to receive
+// data from the kernel if an eBPF map is specified.
 func (m *Module) Prepare() (*Handler, error) {
 	// Create a new handler with the provided module name.
 	handler := NewHandler(m.name)
 
+	// Create map reader to receive data from the kernel
+	if m.ebpfMap != nil {
+		mrs, err := m.ebpfMap.CreateReaders()
+		if err != nil {
+			return nil, moduleErr.Throwf("error creating map readers: %v", err)
+		}
+
+		// Add map readers to the handler.
+		handler.AddMapReaders(mrs)
+	}
+
+	return handler, nil
+}
+
+// Attach attaches the module's programs to the kernel and adds probe links to the provided handler.
+func (m *Module) Attach(handler *Handler) error {
 	// Attach programs to the kernel hook points
 	for _, prog := range m.programs {
 		hook := prog.hook
@@ -56,23 +74,13 @@ func (m *Module) Prepare() (*Handler, error) {
 
 		pL, err := hook.AttachProbe(prog.name)
 		if err != nil {
-			return nil, moduleErr.Throwf("%v", err)
+			return moduleErr.Throwf("%v", err)
 		}
 
 		handler.AddProbeLink(pL)
 	}
 
-	// Create map reader to receive data from the kernel
-	if m.ebpfMap != nil {
-		mrs, err := m.ebpfMap.CreateReaders()
-		if err != nil {
-			return nil, moduleErr.Throwf("%v", err)
-		}
-
-		handler.AddMapReaders(mrs)
-	}
-
-	return handler, nil
+	return nil
 }
 
 // GetName returns the name of the Module.

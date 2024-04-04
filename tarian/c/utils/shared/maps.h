@@ -39,6 +39,21 @@
 #define BPF_RINGBUF_RESERVE(__map_name__, __size__)                            \
   bpf_ringbuf_reserve(&__map_name__, __size__, 0)
 
+struct tarian_detector_pid {
+  __uint(type, BPF_MAP_TYPE_HASH);
+  __uint(max_entries, 1);
+  __type(key, uint32_t);
+  __type(value, uint32_t);
+} tarian_detector_application_pid SEC(".maps");
+
+stain int32_t get_application_pid() {
+  uint32_t index = 0;
+  uint32_t *value = (uint32_t *)bpf_map_lookup_elem(&tarian_detector_application_pid, &index);
+  if (!value) return -1;
+
+  return *value;
+}
+
 struct statistics{
 __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
 __uint(max_entries, 1);
