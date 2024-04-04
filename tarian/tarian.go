@@ -5,6 +5,7 @@ package tarian
 
 import (
 	"errors"
+	"os"
 
 	cilium_ebpf "github.com/cilium/ebpf"
 	ebpf "github.com/intelops/tarian-detector/pkg/eBPF"
@@ -27,6 +28,12 @@ func GetModule() (*ebpf.Module, error) {
 		}
 
 		return nil, tarianErr.Throwf("%v", err)
+	}
+
+	// update_application_pid updates the application pid to the kernel
+	err = update_application_pid(bpfObjs.TarianDetectorApplicationPid)
+	if err != nil {
+		return nil, err
 	}
 
 	tarianDetectorModule := ebpf.NewModule("tarian_detector")
@@ -117,4 +124,25 @@ func getBpfObject() (*tarianObjects, error) {
 	}
 
 	return &bpfObj, nil
+}
+
+// update_application_pid updates the application pid to the kernel
+//
+// This function updates the application pid to the kernel through a map.
+// The map is declared in the eBPF spec and its name is `tarian_detector_application_pid`.
+// The key of the map is a uint32 with value 0, and the value of the map is also a uint32
+// which represents the pid of the application.
+//
+// The function uses `ebpf.Map.Update` with `ebpf.UpdateAny` option to update the map.
+// If there is an error, it returns a formatted error from the tarianErr package.
+func update_application_pid(m *cilium_ebpf.Map) error {
+	var key uint32 = 0
+	var value uint32 = uint32(os.Getpid())
+
+	err := m.Update(&key, &value, cilium_ebpf.UpdateAny)
+	if err != nil {
+		return tarianErr.Throwf("Failed to forward application pid to kernel: %v", err)
+	}
+
+	return nil
 }

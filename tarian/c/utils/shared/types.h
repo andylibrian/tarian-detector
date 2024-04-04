@@ -107,6 +107,10 @@ typedef struct tarian_stats {
   /* count of events with bpf_probe_read_* failures */
   u64 n_trgs_read_error;
 
+  /* count of dropped triggers due to a filter match*/
+  u64 n_trgs_filter_drop;
+
+  /* count of untracked scenarios */
   u64 n_trgs_unknown;
 } tarian_stats_t;  /* 48B */
 

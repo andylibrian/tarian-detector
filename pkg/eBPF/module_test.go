@@ -301,7 +301,6 @@ func TestModule_GetMap(t *testing.T) {
 // TestModule_Prepare tests the Prepare function
 func TestModule_Prepare(t *testing.T) {
 	mapP := dummy_perf_map(t)
-	prog := dummy_kprobe_prog(t)
 
 	type fields struct {
 		name     string
@@ -328,22 +327,13 @@ func TestModule_Prepare(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid values with dummy program and map",
+			name: "valid values with dummy map",
 			fields: fields{
-				name: "test",
-				programs: []*ProgramInfo{
-					NewProgram(prog, NewHookInfo().Kprobe("vprintk")),
-				},
+				name:    "test",
 				ebpfMap: NewPerfEvent(mapP),
 			},
 			want: &Handler{
 				name: "test",
-				probeLinks: []link.Link{
-					func() link.Link {
-						l, _ := link.Kprobe("vprintk", prog, nil)
-						return l
-					}(),
-				},
 				mapReaders: []any{
 					func() *perf.Reader {
 						r, _ := perf.NewReader(mapP, os.Getpagesize())
@@ -352,33 +342,6 @@ func TestModule_Prepare(t *testing.T) {
 				},
 			},
 			wantErr: false,
-		},
-		{
-			name: "disabled program",
-			fields: fields{
-				name: "test",
-				programs: []*ProgramInfo{
-					NewProgram(prog, NewHookInfo().Kprobe("vprintk")).Disable(),
-				},
-				ebpfMap: nil,
-			},
-			want: &Handler{
-				name: "test",
-			},
-
-			wantErr: false,
-		},
-		{
-			name: "nil ebpf prog",
-			fields: fields{
-				name: "test",
-				programs: []*ProgramInfo{
-					NewProgram(prog, NewHookInfo().Kprobe("")),
-				},
-				ebpfMap: nil,
-			},
-
-			wantErr: true,
 		},
 		{
 			name: "wrong map type",
@@ -420,6 +383,95 @@ func TestModule_Prepare(t *testing.T) {
 
 			if len(got.probeLinks) != len(tt.want.probeLinks) {
 				t.Errorf("Module.Prepare().probeLinks = %v, want %v", got.probeLinks, tt.want.probeLinks)
+			}
+		})
+	}
+}
+
+func TestModule_Attach(t *testing.T) {
+	mapP := dummy_perf_map(t)
+	prog := dummy_kprobe_prog(t)
+
+	type fields struct {
+		name     string
+		programs []*ProgramInfo
+		ebpfMap  *MapInfo
+	}
+	type args struct {
+		handler *Handler
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid values with dummy program and map",
+			fields: fields{
+				name: "test",
+				programs: []*ProgramInfo{
+					NewProgram(prog, NewHookInfo().Kprobe("vprintk")),
+				},
+				ebpfMap: NewPerfEvent(mapP),
+			},
+			args: args{
+				handler: &Handler{
+					name: "test",
+					probeLinks: []link.Link{
+						func() link.Link {
+							l, _ := link.Kprobe("vprintk", prog, nil)
+							return l
+						}(),
+					},
+					mapReaders: []any{
+						func() *perf.Reader {
+							r, _ := perf.NewReader(mapP, os.Getpagesize())
+							return r
+						}(),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "disabled program",
+			fields: fields{
+				name: "test",
+				programs: []*ProgramInfo{
+					NewProgram(prog, NewHookInfo().Kprobe("vprintk")).Disable(),
+				},
+				ebpfMap: nil,
+			},
+			args: args{
+				handler: &Handler{
+					name: "test",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil ebpf prog",
+			fields: fields{
+				name: "test",
+				programs: []*ProgramInfo{
+					NewProgram(prog, NewHookInfo().Kprobe("")),
+				},
+				ebpfMap: nil,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Module{
+				name:     tt.fields.name,
+				programs: tt.fields.programs,
+				ebpfMap:  tt.fields.ebpfMap,
+			}
+			if err := m.Attach(tt.args.handler); (err != nil) != tt.wantErr {
+				t.Errorf("Module.Attach() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

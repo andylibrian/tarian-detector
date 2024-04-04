@@ -24,7 +24,7 @@ For a more detailed view of the test coverage, you can generate a coverage profi
 
 ```bash
 sudo go test ./... -coverprofile=coverage.out
-sudo tool cover -html=coverage.out
+go tool cover -html=coverage.out
 ```
 
 This will provide a visual representation of which parts of your code are covered by tests.
