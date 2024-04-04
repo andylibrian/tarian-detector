@@ -26,6 +26,7 @@ type tarianTarianStatsT struct {
 	N_trgsDroppedMaxMapCapacity uint64
 	N_trgsDroppedMaxBufferSize  uint64
 	N_trgsReadError             uint64
+	N_trgsFilterDrop            uint64
 	N_trgsUnknown               uint64
 }
 
@@ -108,10 +109,11 @@ type tarianProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type tarianMapSpecs struct {
-	Events         *ebpf.MapSpec `ebpf:"events"`
-	PeaPerCpuArray *ebpf.MapSpec `ebpf:"pea_per_cpu_array"`
-	ScratchSpace   *ebpf.MapSpec `ebpf:"scratch_space"`
-	TarianStats    *ebpf.MapSpec `ebpf:"tarian_stats"`
+	Events                       *ebpf.MapSpec `ebpf:"events"`
+	PeaPerCpuArray               *ebpf.MapSpec `ebpf:"pea_per_cpu_array"`
+	ScratchSpace                 *ebpf.MapSpec `ebpf:"scratch_space"`
+	TarianDetectorApplicationPid *ebpf.MapSpec `ebpf:"tarian_detector_application_pid"`
+	TarianStats                  *ebpf.MapSpec `ebpf:"tarian_stats"`
 }
 
 // tarianObjects contains all objects after they have been loaded into the kernel.
@@ -133,10 +135,11 @@ func (o *tarianObjects) Close() error {
 //
 // It can be passed to loadTarianObjects or ebpf.CollectionSpec.LoadAndAssign.
 type tarianMaps struct {
-	Events         *ebpf.Map `ebpf:"events"`
-	PeaPerCpuArray *ebpf.Map `ebpf:"pea_per_cpu_array"`
-	ScratchSpace   *ebpf.Map `ebpf:"scratch_space"`
-	TarianStats    *ebpf.Map `ebpf:"tarian_stats"`
+	Events                       *ebpf.Map `ebpf:"events"`
+	PeaPerCpuArray               *ebpf.Map `ebpf:"pea_per_cpu_array"`
+	ScratchSpace                 *ebpf.Map `ebpf:"scratch_space"`
+	TarianDetectorApplicationPid *ebpf.Map `ebpf:"tarian_detector_application_pid"`
+	TarianStats                  *ebpf.Map `ebpf:"tarian_stats"`
 }
 
 func (m *tarianMaps) Close() error {
@@ -144,6 +147,7 @@ func (m *tarianMaps) Close() error {
 		m.Events,
 		m.PeaPerCpuArray,
 		m.ScratchSpace,
+		m.TarianDetectorApplicationPid,
 		m.TarianStats,
 	)
 }
