@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/intelops/tarian-detector/pkg/err"
+	"github.com/intelops/tarian-detector/pkg/k8s"
 	"github.com/intelops/tarian-detector/pkg/utils"
 )
 
@@ -37,41 +38,53 @@ func NewByteStream(inputData []byte, n uint8) *ByteStream {
 // It first retrieves the eventId from the input data, then checks if the event exists in the Events map.
 // It then reads the TarianMetaData from the data, updates the Syscall if needed, and parses the parameters.
 // Finally, it returns the parsed record and any error encountered during parsing.
-func ParseByteArray(data []byte) (map[string]any, error) {
+func ParseByteArray(watcher *k8s.PodWatcher, data []byte) (TarianDetectorEvent, error) {
 	// Assuming a specific byte pattern within the byte array:
-	// tarianmetadata + params
-
-	eventId, err := getEventId(data)
-	if err != nil {
-		return nil, parserErr.Throwf("%v", err)
-	}
-
-	event, noEvent := Events[TarianEventsE(eventId)]
-	if !noEvent {
-		return nil, parserErr.Throwf("missing event from 'var Events TarianEventMap' for key: %v", eventId)
-	}
-
+	// tarianmetadata + directory + executable + params
 	var metaData TarianMetaData
 	lenMetaData := binary.Size(metaData)
-	err = binary.Read(bytes.NewReader(data), binary.LittleEndian, &metaData)
+	err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &metaData)
 	if err != nil {
-		return nil, parserErr.Throwf("%v", err)
+		return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
 	}
 
-	if metaData.MetaData.Syscall != int32(event.syscallId) {
-		metaData.MetaData.Syscall = int32(event.syscallId)
+	event, err := GetTarianEvent(TarianEventsE(metaData.Event()))
+	if err != nil {
+		return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
 	}
 
-	record := toMap(metaData)
-	record["eventId"] = event.name
+	if metaData.Syscall() != int32(event.syscallId) {
+		(&metaData).SetSyscall(int32(event.syscallId))
+	}
 
-	bs := NewByteStream(data[lenMetaData:], metaData.MetaData.Nparams)
+	record := initDetectorEvent(metaData)
+	record.EventId = event.name
+
+	bs := NewByteStream(data[lenMetaData:], metaData.Nparams())
+
+	record.Directory, err = bs.parseString()
+	if err != nil {
+		return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
+	}
+
+	record.Executable, err = bs.parseString()
+	if err != nil {
+		return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
+	}
+
+	if watcher != nil {
+		record.Kubernetes, err = GetK8sContext(watcher, uint32(metaData.HostPid()))
+		if err != nil {
+			return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
+		}
+	}
+
 	ps, err := bs.parseParams(event)
 	if err != nil {
-		return nil, parserErr.Throwf("%v", err)
+		return TarianDetectorEvent{}, parserErr.Throwf("%v", err)
 	}
 
-	record["context"] = ps
+	record.Context = ps
 
 	return record, nil
 }
@@ -340,49 +353,34 @@ func (bs *ByteStream) parseSocketAddress() (any, error) {
 	}
 }
 
-// getEventId reads the eventId from the data and returns it as an int.
-func getEventId(data []byte) (int, error) {
-	id, err := utils.Int32(data, 0)
-	if err != nil {
-		return 0, parserErr.Throwf("failed to read eventId from data: %v", err)
+// initDetectorEvent converts the TarianMetaData struct to a map[string]any.
+func initDetectorEvent(t TarianMetaData) TarianDetectorEvent {
+	return TarianDetectorEvent{
+		Timestamp:           t.Ts(),
+		SyscallId:           t.Syscall(),
+		ProcessorId:         t.Processor(),
+		ThreadStartTime:     t.StartTime(),
+		HostProcessId:       t.HostPid(),
+		HostThreadId:        t.HostTgid(),
+		HostParentProcessId: t.HostPpid(),
+		ProcessId:           t.Pid(),
+		ThreadId:            t.Tgid(),
+		ParentProcessId:     t.Ppid(),
+		UserId:              t.Uid(),
+		GroupId:             t.Gid(),
+		CgroupId:            t.CgroupId(),
+		MountNamespaceId:    t.MountNsId(),
+		PidNamespaceId:      t.PidNsId(),
+		ExecId:              t.ExecId(),
+		ParentExecId:        t.ParentExecId(),
+		ProcessName:         t.Comm(),
+		HostDetails: HostDetails{
+			Sysname:       t.Sysname(),
+			Hostname:      t.Nodename(),
+			Release:       t.Release(),
+			KernelVersion: t.Version(),
+			Machine:       t.Machine(),
+			Domainname:    t.Domainname(),
+		},
 	}
-
-	return int(id), nil
-}
-
-// toMap converts the TarianMetaData struct to a map[string]any.
-func toMap(t TarianMetaData) map[string]any {
-	m := make(map[string]any)
-
-	m["timestamp"] = t.MetaData.Ts
-	m["syscallId"] = t.MetaData.Syscall
-	m["processor"] = t.MetaData.Processor
-
-	// task fields
-	m["threadStartTime"] = t.MetaData.Task.StartTime
-	m["hostProcessId"] = t.MetaData.Task.HostPid
-	m["hostThreadId"] = t.MetaData.Task.HostTgid
-	m["hostParentProcessId"] = t.MetaData.Task.HostPpid
-	m["processId"] = t.MetaData.Task.Pid
-	m["threadId"] = t.MetaData.Task.Tgid
-	m["parentProcessId"] = t.MetaData.Task.Ppid
-	m["userId"] = t.MetaData.Task.Uid
-	m["groupId"] = t.MetaData.Task.Gid
-	m["cgroupId"] = t.MetaData.Task.CgroupId
-	m["mountNamespace"] = t.MetaData.Task.MountNsId
-	m["pidNamespace"] = t.MetaData.Task.PidNsId
-	m["execId"] = t.MetaData.Task.ExecId
-	m["parentExecId"] = t.MetaData.Task.ParentExecId
-	m["processName"] = utils.ToString(t.MetaData.Task.Comm[:], 0, len(t.MetaData.Task.Comm))
-	m["directory"] = utils.ToString(t.MetaData.Task.Cwd[:], 0, len(t.MetaData.Task.Cwd))
-
-	// SystemInfo fields
-	m["sysname"] = utils.ToString(t.SystemInfo.Sysname[:], 0, len(t.SystemInfo.Sysname))
-	m["nodename"] = utils.ToString(t.SystemInfo.Nodename[:], 0, len(t.SystemInfo.Nodename))
-	m["release"] = utils.ToString(t.SystemInfo.Release[:], 0, len(t.SystemInfo.Release))
-	m["version"] = utils.ToString(t.SystemInfo.Version[:], 0, len(t.SystemInfo.Version))
-	m["machine"] = utils.ToString(t.SystemInfo.Machine[:], 0, len(t.SystemInfo.Machine))
-	m["domainname"] = utils.ToString(t.SystemInfo.Domainname[:], 0, len(t.SystemInfo.Domainname))
-
-	return m
 }
