@@ -57,8 +57,7 @@ typedef struct __attribute__((__packed__)) task_meta_data {
   u64 parent_exec_id; /* user defined: parent execution id*/
 
   u8 comm[TASK_COMM_LEN]; /* task's process name*/
-  u8 cwd[MAX_TARIAN_PATH];
-} task_meta_data_t; /* 352B */
+} task_meta_data_t; /* 96B */
 
 typedef struct __attribute__((__packed__)) event_meta_data {
   s32 event;     /* event id associated with the event */
@@ -67,12 +66,12 @@ typedef struct __attribute__((__packed__)) event_meta_data {
   u64 ts;        /* event timestamp */
   u16 processor; /* processor id where the event was processed */
   task_meta_data_t task; /* event's task meta data */
-} event_meta_data_t;     /* 371B */
+} event_meta_data_t;     /* 115B */
 
 typedef struct __attribute__((__packed__)) tarian_meta_data {
   event_meta_data_t meta_data;
   node_meta_data_t system_info; /* system information */
-} tarian_meta_data_t;           /* 761B */
+} tarian_meta_data_t;           /* 505B */
 
 typedef struct event {
   /* 1 - buf on per cpu array for perf event 2 - ringbuf map 3 - buf on per cpu
@@ -112,6 +111,6 @@ typedef struct tarian_stats {
 
   /* count of untracked scenarios */
   u64 n_trgs_unknown;
-} tarian_stats_t;  /* 48B */
+} tarian_stats_t;  /* 64B */
 
 #endif
