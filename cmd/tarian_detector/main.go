@@ -12,8 +12,15 @@ import (
 	"time"
 
 	"github.com/intelops/tarian-detector/pkg/detector"
-	"github.com/intelops/tarian-detector/pkg/utils"
+	"github.com/intelops/tarian-detector/pkg/k8s"
 	"github.com/intelops/tarian-detector/tarian"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+)
+
+const (
+	// NotInClusterErrMsg is an error message for when the Kubernetes environment is not detected.
+	NotInClusterErrMsg string = "Kubernetes environment not detected. The Kubernetes context has been disabled."
 )
 
 // main is the entry point of the application. It sets up the necessary components
@@ -27,8 +34,6 @@ func main() {
 	watcher, err := K8Watcher()
 	if err != nil {
 		log.Print(err)
-	} else {
-		watcher.Start()
 	}
 
 	// Initialize Tarian eBPF module
@@ -48,6 +53,7 @@ func main() {
 
 	// Add the eBPF module to the detectors
 	eventsDetector.Add(tarianDetector)
+	eventsDetector.SetPodWatcher(watcher)
 
 	// Start the event detectors and defer their closure
 	err = eventsDetector.Start()
@@ -86,17 +92,7 @@ func main() {
 				continue
 			}
 
-			// Retrieve Kubernetes context based on host process ID
-			k8sCtx, err := GetK8sContext(watcher, e["hostProcessId"].(uint32))
-			if err != nil {
-				// Log the error as the Kubernetes context if an error is
-				e["kubernetes"] = err.Error()
-			} else {
-				// Set the Kubernetes context if no error is encountered
-				e["kubernetes"] = k8sCtx
-			}
-
-			utils.PrintEvent(e, eventsDetector.GetTotalCount())
+			fmt.Println(e)
 		}
 	}()
 
@@ -104,4 +100,19 @@ func main() {
 	for {
 		time.Sleep(1 * time.Minute)
 	}
+}
+
+// K8Watcher initializes and returns a new PodWatcher for the current Kubernetes cluster.
+func K8Watcher() (*k8s.PodWatcher, error) {
+	// Get the in-cluster configuration.
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("%v. %s", err, NotInClusterErrMsg)
+	}
+
+	// Create a new Kubernetes client set.
+	clientSet := kubernetes.NewForConfigOrDie(config)
+
+	// Return a new PodWatcher for the current Kubernetes cluster.
+	return k8s.NewPodWatcher(clientSet)
 }
