@@ -4,7 +4,7 @@
 #define MAX_PATH_LOOP 20
 #define MAX_NODE_FIELD_SIZE 65    /* 65B */
 #define MAX_STRING_SIZE 4096   
-#define MAX_TARIAN_PATH 256   
+#define MAX_TARIAN_PATH 4096   
 #define MAX_SCRATCH_SPACE 8192
 #define MAX_BUFFER_SIZE 1024 * 128    /* 128kB */
 #define MAX_EVENT_SIZE 64 * 1024    /* 64kB */
@@ -115,8 +115,9 @@ typedef enum tarian_events_e{
 } tarian_event_code;
 
 /*****Event Data Size - START****/
-#define MD_SIZE sizeof(tarian_meta_data_t) /* sizeof tarian meta data for each event*/
-#define PARAM_SIZE sizeof(uint16_t)
+/* sizeof tarian meta data for each event*/
+#define MD_SIZE sizeof(tarian_meta_data_t) + MAX_TARIAN_PATH * 2 + PARAM_SIZE * 2 /* for directory and executable*/
+#define PARAM_SIZE sizeof(uint16_t) /* appended before an variable length argument represents size of the argument data*/
 
 #define TDS_EXECVE_E (MD_SIZE + MAX_STRING_SIZE*2 + PARAM_SIZE*2)
 #define TDS_EXECVE_R (MD_SIZE + sizeof(int32_t))

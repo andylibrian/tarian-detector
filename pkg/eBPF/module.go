@@ -59,6 +59,7 @@ func (m *Module) Prepare() (*Handler, error) {
 		handler.AddMapReaders(mrs)
 	}
 
+	handler.countPrograms = m.Count()
 	return handler, nil
 }
 
@@ -81,6 +82,20 @@ func (m *Module) Attach(handler *Handler) error {
 	}
 
 	return nil
+}
+
+// Count returns the number of programs that are set to be attached.
+//
+// Programs that are not set to be attached are not included in the count.
+func (m *Module) Count() int {
+	count := 0
+	for _, p := range m.programs {
+		if p.shouldAttach {
+			count++
+		}
+	}
+
+	return count
 }
 
 // GetName returns the name of the Module.

@@ -30,8 +30,8 @@ func GetModule() (*ebpf.Module, error) {
 		return nil, tarianErr.Throwf("%v", err)
 	}
 
-	// update_application_pid updates the application pid to the kernel
-	err = update_application_pid(bpfObjs.TarianDetectorApplicationPid)
+	// updateApplicationPid updates the application pid to the kernel
+	err = updateApplicationPid(bpfObjs.TarianDetectorApplicationPid)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func getBpfObject() (*tarianObjects, error) {
 	return &bpfObj, nil
 }
 
-// update_application_pid updates the application pid to the kernel
+// updateApplicationPid updates the application pid to the kernel
 //
 // This function updates the application pid to the kernel through a map.
 // The map is declared in the eBPF spec and its name is `tarian_detector_application_pid`.
@@ -135,7 +135,7 @@ func getBpfObject() (*tarianObjects, error) {
 //
 // The function uses `ebpf.Map.Update` with `ebpf.UpdateAny` option to update the map.
 // If there is an error, it returns a formatted error from the tarianErr package.
-func update_application_pid(m *cilium_ebpf.Map) error {
+func updateApplicationPid(m *cilium_ebpf.Map) error {
 	var key uint32 = 0
 	var value uint32 = uint32(os.Getpid())
 
