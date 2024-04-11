@@ -6,6 +6,7 @@ package detector
 import (
 	"github.com/intelops/tarian-detector/pkg/err"
 	"github.com/intelops/tarian-detector/pkg/eventparser"
+	"github.com/intelops/tarian-detector/pkg/k8s"
 )
 
 var detectorErr = err.New("detector.detector")
@@ -32,6 +33,7 @@ type EventsDetector struct {
 	totalRecordsCount int                     // totalRecordsCount is the total count of records.
 	totalDetectors    int                     // totalDetectors is the total number of detectors.
 	probeRecordsCount map[string]int          // probeRecordsCount is a map of probe names to their respective counts
+	watcher           *k8s.PodWatcher         // watcher is a pointer to a PodWatcher instance
 }
 
 // NewEventsDetector creates a new EventsDetector instance
@@ -79,6 +81,11 @@ func (t *EventsDetector) GetProbeCount() map[string]int {
 	return t.probeRecordsCount
 }
 
+// SetPodWatcher sets the pod watcher.
+func (t *EventsDetector) SetPodWatcher(w *k8s.PodWatcher) {
+	t.watcher = w
+}
+
 // Start initiates the event detection process. It iterates over the map of each detector,
 // starts a goroutine for each map. These goroutines continuously read events from the maps
 // and send them to the event queue. If the detector is closed, the goroutines stop reading events.
@@ -112,6 +119,10 @@ func (t *EventsDetector) Start() error {
 
 	t.started = true
 
+	if t.watcher != nil {
+		t.watcher.Start()
+	}
+
 	return nil
 }
 
@@ -131,23 +142,20 @@ func (t *EventsDetector) Close() error {
 
 // ReadAsInterface reads a byte array from the event queue, parses it, and increments the total count.
 // It also checks for the presence of an event ID and increments the probe count if found.
-func (t *EventsDetector) ReadAsInterface() (map[string]any, error) {
+func (t *EventsDetector) ReadAsInterface() (eventparser.TarianDetectorEvent, error) {
 	eventparser.LoadTarianEvents()
 	r := <-t.eventQueue
 	if r.err != nil {
-		return map[string]any{}, detectorErr.Throwf("%v", r.err)
+		return eventparser.TarianDetectorEvent{}, detectorErr.Throwf("%v", r.err)
 	}
 
 	t.incrementTotalCount()
-	data, err := eventparser.ParseByteArray(r.eventData)
+	data, err := eventparser.ParseByteArray(t.watcher, r.eventData)
 	if err != nil {
 		return data, detectorErr.Throwf("%v", err)
 	}
 
-	probe, ok := data["eventId"]
-	if ok {
-		t.probeCount(probe.(string))
-	}
+	t.probeCount(data.EventId)
 
 	return data, nil
 }

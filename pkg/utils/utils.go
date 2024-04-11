@@ -4,8 +4,6 @@
 package utils
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -57,25 +55,4 @@ func CurrentKernelVersion() (int, error) {
 	}
 
 	return KernelVersion(a, b, c), nil
-}
-
-// PrintEvent prints the given data map along with a total captured count and a divider.
-// It uses a predefined set of keys to extract values from the data map.
-func PrintEvent(data map[string]any, t int) {
-	keys := []string{
-		"eventId", "timestamp", "syscallId", "processor",
-		"threadStartTime", "hostProcessId", "hostThreadId",
-		"hostParentProcessId", "processId", "threadId", "parentProcessId",
-		"userId", "groupId", "cgroupId", "mountNamespace", "pidNamespace",
-		"execId", "parentExecId", "processName", "directory",
-		"sysname", "nodename", "release", "version", "machine", "domainname",
-		"context",
-	}
-	div := "=================================="
-	msg := ""
-	for _, ky := range keys {
-		msg += fmt.Sprintf("%s: %+v\n", ky, data[ky])
-	}
-
-	log.Printf("Total captured %d.\n%s\n%s%s\n", t, div, msg, div)
 }
