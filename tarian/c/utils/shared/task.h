@@ -64,4 +64,10 @@ stain struct task_struct *get_task_parent(struct task_struct *task) {
   return BPF_CORE_READ(task, parent);
 }
 
+stain struct path get_task_directory(struct task_struct *task) {
+    return BPF_CORE_READ(task, fs, pwd);
+}
+stain struct path get_task_executable(struct task_struct *task) {
+  return BPF_CORE_READ(task, mm, exe_file, f_path);
+}
 #endif

@@ -152,36 +152,3 @@ func TestCurrentKernelVersion(t *testing.T) {
 		})
 	}
 }
-
-// TestPrintEvent is a Go function for testing the PrintEvent function.
-func TestPrintEvent(t *testing.T) {
-	type args struct {
-		data map[string]any
-		t    int
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "empty map",
-			args: args{
-				data: map[string]any{},
-				t:    0,
-			},
-		}, {
-			name: "non empty map",
-			args: args{
-				data: map[string]any{
-					"eventId":   "sys_test",
-					"syscallId": -1,
-				},
-				t: 0,
-			},
-		}}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			PrintEvent(tt.args.data, tt.args.t)
-		})
-	}
-}

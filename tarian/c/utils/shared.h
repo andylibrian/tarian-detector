@@ -91,12 +91,11 @@ stain void print_event(tarian_event_t *te) {
   bpf_printk("19. parent_exec %ld 20. sysname %s 21. nodename %s ", te->tarian->meta_data.task.parent_exec_id, te->tarian->system_info.sysname, te->tarian->system_info.nodename);
   bpf_printk("22. release %s 23. version %s", te->tarian->system_info.release, te->tarian->system_info.version);
   bpf_printk("24. machine %s 25. domainname %s 26. nparams %d", te->tarian->system_info.machine, te->tarian->system_info.domainname, te->tarian->meta_data.nparams);
-  bpf_printk("27. cwd %s", te->tarian->meta_data.task.cwd);
 };
 
 #define SCRATCH_SAFE_ACCESS(x) (x) & (MAX_STRING_SIZE - 1)
-stain uint8_t *get__cwd_d_path(uint32_t *slen, scratch_space_t *s, struct task_struct *task) {
-  struct path path = BPF_CORE_READ(task, fs, pwd);
+stain uint8_t *get__d_path(uint32_t *slen, scratch_space_t *s, struct path *p) {
+  struct path path = *p;
   struct dentry *dentry = path.dentry;
   struct vfsmount *vfsmnt = path.mnt;
 

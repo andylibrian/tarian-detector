@@ -147,9 +147,10 @@ func TestHandler_Count(t *testing.T) {
 	l, _ := link.Kprobe("vprintk", prog, nil)
 
 	type fields struct {
-		name       string
-		mapReaders []any
-		probeLinks []link.Link
+		name          string
+		mapReaders    []any
+		probeLinks    []link.Link
+		countPrograms int
 	}
 	tests := []struct {
 		name   string
@@ -159,18 +160,20 @@ func TestHandler_Count(t *testing.T) {
 		{
 			name: "valid values",
 			fields: fields{
-				name:       "test",
-				mapReaders: make([]any, 0),
-				probeLinks: make([]link.Link, 0),
+				name:          "test",
+				mapReaders:    make([]any, 0),
+				probeLinks:    make([]link.Link, 0),
+				countPrograms: 0,
 			},
 			want: 0,
 		},
 		{
 			name: "add an item to the probelink",
 			fields: fields{
-				name:       "test",
-				mapReaders: nil,
-				probeLinks: []link.Link{l, l, l},
+				name:          "test",
+				mapReaders:    nil,
+				probeLinks:    []link.Link{l, l, l},
+				countPrograms: 3,
 			},
 			want: 3,
 		},
@@ -179,9 +182,10 @@ func TestHandler_Count(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &Handler{
-				name:       tt.fields.name,
-				mapReaders: tt.fields.mapReaders,
-				probeLinks: tt.fields.probeLinks,
+				name:          tt.fields.name,
+				mapReaders:    tt.fields.mapReaders,
+				probeLinks:    tt.fields.probeLinks,
+				countPrograms: tt.fields.countPrograms,
 			}
 			if got := h.Count(); got != tt.want {
 				t.Errorf("Handler.Count() = %v, want %v", got, tt.want)

@@ -12,9 +12,10 @@ var handlerErr = err.New("ebpf.handler")
 
 // Handler represents an eBPF handler. It includes the name of the handler, a list of map readers, and a list of probe links.
 type Handler struct {
-	name       string      // Name of the handler
-	mapReaders []any       // List of map readers
-	probeLinks []link.Link // List of probe links
+	name          string      // Name of the handler
+	mapReaders    []any       // List of map readers
+	probeLinks    []link.Link // List of probe links
+	countPrograms int
 }
 
 // NewHandler creates a new eBPF handler with the given name.
@@ -43,7 +44,7 @@ func (h *Handler) ReadAsInterface() ([]func() ([]byte, error), error) {
 
 // Count returns the number of probe links in the handler.
 func (h *Handler) Count() int {
-	return len(h.probeLinks)
+	return h.countPrograms
 }
 
 // Close detaches probes and closes map readers.
