@@ -349,7 +349,16 @@ func (bs *ByteStream) parseSocketAddress() (any, error) {
 			return fmt.Sprintf("%+v", addr), nil
 		}
 	default:
-		return nil, nil
+		{
+			type unknownAddr struct {
+				Family string
+			}
+
+			var addr unknownAddr
+			addr.Family = socketFamilyNames[int32(family)]
+
+			return fmt.Sprintf("%+v", addr), nil
+		}
 	}
 }
 

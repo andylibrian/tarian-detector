@@ -247,6 +247,9 @@ stain void write_sockaddr(uint8_t *buf, uint64_t *pos, unsigned long data_ptr, u
       write_str(buf, pos, start_reading_point, MAX_UNIX_SOCKET_PATH, KERNEL);
       break;
     }
+    default: {
+      write_u8(buf, pos, socket_family);
+    }
   }
 }
 
