@@ -4,6 +4,7 @@
 package eventparser
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -440,7 +441,7 @@ func TestByteStream_parseSocketAddress(t *testing.T) {
 				position: 0,
 				nparams:  2,
 			},
-			want:    nil,
+			want:    fmt.Sprintf("%+v", struct{ Family string }{Family: "AF_UNSPEC"}),
 			wantErr: false,
 		},
 		{
